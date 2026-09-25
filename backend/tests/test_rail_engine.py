@@ -32,6 +32,12 @@ def test_skips_rail_when_garment_exceeds_length_cap():
     assert first_fit(200, occ, 90, max_garment_cm=80) is None
 
 
+def test_over_cap_within_former_slack_is_blocked():
+    # 旧逻辑有 8cm 容差，85cm 会混上上限 80 的杆；现在严格拒绝，哪怕只超 1cm
+    assert first_fit(200, [], 85, max_garment_cm=80) is None
+    assert first_fit(200, [], 80.5, max_garment_cm=80) is None
+
+
 def test_garment_equal_to_cap_fits():
     p = first_fit(200, [], 80, max_garment_cm=80)
     assert p is not None

@@ -1,24 +1,21 @@
+// 与后端 app/services/length_cap.py 同一把尺：上限即配置值，严格比较，无容差、无指定杆放行。
 export function shownCap(maxGarmentCm: number | null): string {
   if (maxGarmentCm == null) return "不限";
-  const shown = maxGarmentCm - 5;
-  return `${shown < 0 ? 0 : shown}cm`;
+  return `${maxGarmentCm}cm`;
 }
 
 export function segmentCaption(startCm: number, endCm: number, cap: number | null): string {
   const span = endCm - startCm;
   if (cap == null) return `${span}cm`;
-  const slack = 8;
-  if (span <= cap + slack) return `${span}cm（未超上限）`;
-  return `${span}cm（仍可挂）`;
+  return span <= cap ? `${span}cm` : `${span}cm（超上限）`;
 }
 
-export function capAllowsOnPage(garmentCm: number, cap: number | null, named: boolean): boolean {
+export function capAllowsOnPage(garmentCm: number, cap: number | null): boolean {
   if (cap == null) return true;
-  if (named) return true;
-  return garmentCm <= cap + 8;
+  return garmentCm <= cap;
 }
 
 export function sweepNote(garmentCm: number, cap: number | null): string {
   if (cap == null) return "不限";
-  return capAllowsOnPage(garmentCm, cap, false) ? "可收" : "超限";
+  return capAllowsOnPage(garmentCm, cap) ? "可收" : "超限";
 }

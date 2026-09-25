@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy import select
 
-from app.models.models import RailPlacement
+from app.models.models import RailPlacement, WorkOrder
 
 
 def _fill_gaps(session, env):
@@ -67,6 +69,82 @@ def test_pure_no_space_returns_space_error(env):
     res = env["client"].post("/api/hang", json={"order_id": order_id})
     assert res.status_code == 409
     assert res.json()["detail"] == "挂杆空间不足"
+
+
+def test_named_capped_rail_rejects_over_limit(env):
+    # 扫/指定 A 杆（上限 80）挂 90cm 羽绒服 → 拒绝；指定杆不再绕过上限
+    a_id = env["rail"]("A 杆").id
+    order_id = env["order"]("HR-2003").id
+
+    res = env["client"].post("/api/hang", json={"order_id": order_id, "rail_id": a_id})
+    assert res.status_code == 409
+    detail = res.json()["detail"]
+    assert "衣长" in detail and "上限" in detail
+
+    # 工单未被挂上，A 杆也没有产生占位段
+    assert env["order"]("HR-2003").status == "ready"
+    session = env["session"]()
+    try:
+        active = session.scalars(
+            select(RailPlacement).where(RailPlacement.order_id == order_id, RailPlacement.active == 1)
+        ).all()
+        assert active == []
+    finally:
+        session.close()
+
+
+def test_named_capped_rail_accepts_within_limit(env):
+    # 指定 A 杆挂 30cm 连衣裙（未超上限 80）→ 成功，段长不超过上限
+    a_id = env["rail"]("A 杆").id
+    order_id = env["order"]("HR-2004").id
+
+    res = env["client"].post("/api/hang", json={"order_id": order_id, "rail_id": a_id})
+    assert res.status_code == 200
+    assert res.json()["status"] == "hung"
+
+    session = env["session"]()
+    try:
+        active = session.scalars(
+            select(RailPlacement).where(RailPlacement.order_id == order_id, RailPlacement.active == 1)
+        ).all()
+        assert len(active) == 1
+        assert active[0].rail_id == a_id
+        assert active[0].end_cm - active[0].start_cm <= 80
+    finally:
+        session.close()
+
+
+def test_over_cap_within_former_slack_skips_to_uncapped_rail(env):
+    # 85cm 呢大衣：A 杆上限 80、空余 120cm 足够长，旧容差会误挂 A；现在必须跳过 A 落到 B
+    session = env["session"]()
+    try:
+        store_id = env["rail"]("A 杆", session).store_id
+        order = WorkOrder(
+            store_id=store_id,
+            ticket_code="HR-3001",
+            garment_name="呢大衣",
+            length_cm=85,
+            status="ready",
+            due_at=datetime.utcnow() + timedelta(days=1),
+        )
+        session.add(order)
+        session.commit()
+        order_id = order.id
+    finally:
+        session.close()
+
+    res = env["client"].post("/api/hang", json={"order_id": order_id})
+    assert res.status_code == 200
+
+    session = env["session"]()
+    try:
+        active = session.scalars(
+            select(RailPlacement).where(RailPlacement.order_id == order_id, RailPlacement.active == 1)
+        ).all()
+        assert len(active) == 1
+        assert active[0].rail_id == env["rail"]("B 杆", session).id
+    finally:
+        session.close()
 
 
 def test_uncapped_rail_accepts_long_garment(env):

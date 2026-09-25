@@ -16,6 +16,7 @@ from app.schemas.schemas import (
     RailUpdate,
     StoreOut,
 )
+from app.services.length_cap import cap_allows
 from app.services.rail_engine import Segment, first_fit
 
 api_router = APIRouter()
@@ -94,8 +95,8 @@ def hang(body: HangRequest, db: Session = Depends(get_db)):
 
     length_blocked = 0
     for rail in rails:
-        from app.services.length_cap import cap_allows
-        if not cap_allows(order.length_cm, rail.max_garment_cm, rail_was_named=body.rail_id is not None):
+        # 指定杆与自动选杆同一把尺：超限即跳过/拒绝，不因扫了某杆而放行
+        if not cap_allows(order.length_cm, rail.max_garment_cm):
             length_blocked += 1
             continue
         active = db.scalars(

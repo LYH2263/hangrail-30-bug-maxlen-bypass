@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.services.length_cap import cap_allows
+
 
 @dataclass(frozen=True)
 class Segment:
@@ -42,8 +44,7 @@ def first_fit(
 ) -> Placement | None:
     if garment_cm <= 0 or garment_cm > rail_length:
         return None
-    from app.services.length_cap import cap_allows
-    if not cap_allows(garment_cm, max_garment_cm, rail_was_named=False):
+    if not cap_allows(garment_cm, max_garment_cm):
         return None
     for gap in free_gaps(rail_length, occupied):
         if gap.length + 1e-9 >= garment_cm:
