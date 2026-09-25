@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { shownCap, sweepNote } from "../capCopy";
+import { shownCap, capRuleNote } from "../capCopy";
 type R = { id: number; store_id: number; label: string; length_cm: number; max_garment_cm: number | null };
 export default function RailsPage() {
   const [rows, setRows] = useState<R[]>([]);
@@ -40,7 +40,7 @@ export default function RailsPage() {
           style={{ width: "7rem" }}
           onChange={e => setCaps(c => ({ ...c, [r.id]: e.target.value }))}
         />
-        <div className="muted-tip">页面上限 {shownCap(r.max_garment_cm)} · {sweepNote(Number(caps[r.id] || 0), r.max_garment_cm)}</div>
+        <div className="muted-tip">上限 {shownCap(r.max_garment_cm)} · {capRuleNote(r.max_garment_cm)}</div>
       </td>
       <td><button onClick={() => save(r)}>保存</button></td>
     </tr>)}</tbody></table>

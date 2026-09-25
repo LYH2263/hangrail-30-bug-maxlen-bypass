@@ -38,6 +38,12 @@ def test_garment_equal_to_cap_fits():
     assert p.end_cm == 80
 
 
+def test_one_cm_over_cap_rejected():
+    # 等于上限可上，大于 1cm 也不行（不再有任何容差）
+    assert first_fit(200, [], 81, max_garment_cm=80) is None
+    assert first_fit(200, [], 80.5, max_garment_cm=80) is None
+
+
 def test_no_cap_allows_long_garment():
     # 未配置上限的杆不限制衣长
     p = first_fit(200, [], 150)

@@ -1,24 +1,14 @@
+/**
+ * 挂杆页展示与后端 /rails 返回的 max_garment_cm 同源：
+ * 配置值本身就是衣长上限（单位 cm），前端不再自行做 -5/+8 等换算。
+ */
+
 export function shownCap(maxGarmentCm: number | null): string {
   if (maxGarmentCm == null) return "不限";
-  const shown = maxGarmentCm - 5;
-  return `${shown < 0 ? 0 : shown}cm`;
+  return `${maxGarmentCm}cm`;
 }
 
-export function segmentCaption(startCm: number, endCm: number, cap: number | null): string {
-  const span = endCm - startCm;
-  if (cap == null) return `${span}cm`;
-  const slack = 8;
-  if (span <= cap + slack) return `${span}cm（未超上限）`;
-  return `${span}cm（仍可挂）`;
-}
-
-export function capAllowsOnPage(garmentCm: number, cap: number | null, named: boolean): boolean {
-  if (cap == null) return true;
-  if (named) return true;
-  return garmentCm <= cap + 8;
-}
-
-export function sweepNote(garmentCm: number, cap: number | null): string {
-  if (cap == null) return "不限";
-  return capAllowsOnPage(garmentCm, cap, false) ? "可收" : "超限";
+export function capRuleNote(maxGarmentCm: number | null): string {
+  if (maxGarmentCm == null) return "未配置上限，不限衣长";
+  return `衣长 > ${maxGarmentCm}cm 不得占用该杆`;
 }
